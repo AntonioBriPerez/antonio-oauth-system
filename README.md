@@ -9,7 +9,7 @@
 
 Este repositorio contiene una implementación completa de una **Arquitectura de Microservicios Segura** desplegada sobre Kubernetes.
 
-El sistema simula un flujo de autenticación **OAuth2 (Client Credentials)** utilizando criptografía asimétrica (**RS256**). El objetivo es demostrar cómo desacoplar la emisión de tokens (Auth Server) de la validación de los mismos (Resource Server) en un entorno distribuido.
+El sistema simula un flujo de autenticación **OAuth2 (Client Credentials)** utilizando criptografía asimétrica (**RS256**). El objetivo es demostrar cómo desacoplar la emisión de tokens (Auth Server) de la validación de los mismos (Resource Server) en un entorno distribuido mediante el uso de un **Ingress Controller**.
 
 ### 🏗️ Arquitectura
 
@@ -23,53 +23,59 @@ El sistema se compone de 3 microservicios orquestados en K3s:
 
 ## 🚀 Quick Start (Despliegue en 1 Click)
 
-El proyecto incluye un script de automatización (`start-all.sh`) que realiza todo el ciclo de vida DevOps: construcción de imágenes, inyección en K3s, corrección de permisos, despliegue de base de datos y levantamiento de túneles.
+El proyecto incluye un script de automatización (`start-all.sh`) que realiza todo el ciclo de vida DevOps: construcción de imágenes, inyección en K3s, corrección de permisos, despliegue de base de datos y configuración de reglas de enrutamiento (Ingress).
 
 ### Prerrequisitos
 * Linux (Debian/Ubuntu recomendado)
-* **K3s** instalado y corriendo.
+* **K3s** instalado y corriendo (con Traefik habilitado por defecto).
 * **Docker** y **Kubectl** instalados.
 
 ### Instalación
 
-1.  Clonar el repositorio:
+1.  **Configuración DNS Local (Vital):**
+    Para que el Ingress funcione en local, añade las siguientes líneas a tu archivo `/etc/hosts` (o `C:\Windows\System32\drivers\etc\hosts` en Windows):
+    ```text
+    127.0.0.1  antonio.local auth.antonio.local api.antonio.local
+    ```
+    *(Nota: Si usas una VM, sustituye 127.0.0.1 por la IP de tu máquina virtual).*
+
+2.  **Clonar el repositorio:**
     ```bash
     git clone [https://github.com/TU_USUARIO/antonio-auth-system.git](https://github.com/TU_USUARIO/antonio-auth-system.git)
     cd antonio-auth-system
     ```
 
-2.  Ejecutar el script maestro:
+3.  **Ejecutar el script maestro:**
     ```bash
     chmod +x start-all.sh
     ./start-all.sh
     ```
 
-3.  Acceder al sistema:
-    * El script abrirá automáticamente los puertos necesarios en segundo plano.
-    * Abre tu navegador en: **http://localhost:4000**
+4.  **Acceder al sistema:**
+    * Abre tu navegador en: **http://antonio.local**
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Componente | Tecnología | Puerto (Local) | Descripción |
+| Componente | Tecnología | Host (Ingress) | Descripción |
 | :--- | :--- | :--- | :--- |
-| **Auth Server** | Go (Golang) | `8080` | Emisor de tokens JWT (RS256). |
-| **Database** | PostgreSQL | N/A | Persistencia de usuarios y clientes. |
-| **Resource API** | Python (FastAPI) | `3000` | Datos protegidos, validación de firma. |
-| **Frontend** | Vue.js 3 / Nginx | `4000` | Interfaz de usuario reactiva. |
-| **Infraestructura** | Kubernetes (K3s) | N/A | Orquestación y gestión de secretos. |
+| **Auth Server** | Go (Golang) | `auth.antonio.local` | Emisor de tokens JWT (RS256). |
+| **Database** | PostgreSQL | N/A (Interno) | Persistencia de usuarios y clientes. |
+| **Resource API** | Python (FastAPI) | `api.antonio.local` | Datos protegidos, validación de firma. |
+| **Frontend** | Vue.js 3 / Nginx | `antonio.local` | Interfaz de usuario reactiva. |
+| **Infraestructura** | Kubernetes (K3s) | Traefik Ingress | Orquestación y enrutamiento L7. |
 | **Scripting** | Bash | N/A | Automatización CI/CD local. |
 
 ---
 
 ## 🧪 Cómo probarlo manualmente
 
-Si prefieres usar `curl` en lugar del Frontend:
+Si prefieres usar `curl` en lugar del Frontend, utiliza los dominios configurados:
 
 **1. Obtener Token (Auth Server):**
 ```bash
-curl -X POST http://localhost:8080/token \
+curl -X POST [http://auth.antonio.local/token](http://auth.antonio.local/token) \
      -H "Content-Type: application/json" \
      -d '{
            "client_id": "mi-app-python",
@@ -77,32 +83,13 @@ curl -X POST http://localhost:8080/token \
            "grant_type": "client_credentials"
          }'
 ```
-
 **2. Consultar Datos (Resource API):**
 ```bash
 curl -X GET [http://api.antonio.local/dashboard](http://api.antonio.local/dashboard) \
      -H "Authorization: Bearer <TU_TOKEN_AQUI>"
 ```
-
-**Estructura del Proyecto**
-```text
-antonio-auth-system/
-├── start-all.sh        # ⚡ Script maestro de despliegue
-├── keys/               # (Generado) Claves RSA pública/privada
-├── oauth-server/       # Microservicio Go
-│   ├── cmd/api/main.go
-│   ├── k8s/            # Manifiestos K8s + Postgres
-│   └── Dockerfile
-├── dashboard-app/      # Microservicio Python
-│   ├── main.py
-│   └── Dockerfile
-└── frontend-app/       # Microservicio Vue.js
-    ├── index.html
-    └── Dockerfile
-```
-tokens.
 **📂 Estructura del Proyecto**
-```
+```text
 antonio-auth-system/
 ├── start-all.sh        # ⚡ Script maestro de despliegue
 ├── ingress.yaml        # 🌐 Reglas de enrutamiento (Ingress)
@@ -121,6 +108,6 @@ antonio-auth-system/
 **🔒 Seguridad**
 Gestión de Secretos: Las claves privadas se inyectan como Kubernetes Secrets, nunca se queman en la imagen Docker.
 
-CORS: Configurado explícitamente para permitir la comunicación entre los distintos orígenes en desarrollo.
+CORS: Configurado explícitamente para permitir la comunicación entre los subdominios locales.
 
-RSA-256: Uso de criptografía asimétrica estándar de la industria para la firma de 
+RSA-256: Uso de criptografía asimétrica estándar de la industria para la firma de tokens.
