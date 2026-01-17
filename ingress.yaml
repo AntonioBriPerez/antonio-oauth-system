@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: antonio-ingress
+  annotations:
+    # Opcional: Configuración específica de Traefik si fuera necesaria
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    # 1. FRONTEND (La raíz)
+    - host: antonio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+    
+    # 2. AUTH SERVER (Subdominio auth)
+    - host: auth.antonio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth-service
+                port:
+                  number: 80 # El puerto del SERVICIO, no del pod
+    
+    # 3. API PYTHON (Subdominio api)
+    - host: api.antonio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard-service
+                port:
+                  number: 80

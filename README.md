@@ -80,7 +80,7 @@ curl -X POST http://localhost:8080/token \
 
 **2. Consultar Datos (Resource API):**
 ```bash
-curl -X GET http://localhost:3000/dashboard \
+curl -X GET [http://api.antonio.local/dashboard](http://api.antonio.local/dashboard) \
      -H "Authorization: Bearer <TU_TOKEN_AQUI>"
 ```
 
@@ -100,9 +100,27 @@ antonio-auth-system/
     ├── index.html
     └── Dockerfile
 ```
+tokens.
+**📂 Estructura del Proyecto**
+```
+antonio-auth-system/
+├── start-all.sh        # ⚡ Script maestro de despliegue
+├── ingress.yaml        # 🌐 Reglas de enrutamiento (Ingress)
+├── keys/               # (Generado) Claves RSA pública/privada
+├── oauth-server/       # Microservicio Go
+│   ├── cmd/api/main.go
+│   ├── k8s/            # Manifiestos K8s + Postgres
+│   └── Dockerfile
+├── dashboard-app/      # Microservicio Python
+│   ├── main.py
+│   └── Dockerfile
+└── frontend-app/       # Microservicio Vue.js
+    ├── index.html
+    └── Dockerfile
+```
 **🔒 Seguridad**
 Gestión de Secretos: Las claves privadas se inyectan como Kubernetes Secrets, nunca se queman en la imagen Docker.
 
 CORS: Configurado explícitamente para permitir la comunicación entre los distintos orígenes en desarrollo.
 
-RSA-256: Uso de criptografía asimétrica estándar de la industria para la firma de tokens.
+RSA-256: Uso de criptografía asimétrica estándar de la industria para la firma de 
